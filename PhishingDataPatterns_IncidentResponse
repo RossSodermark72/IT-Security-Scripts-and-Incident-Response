@@ -7,7 +7,7 @@ Nigeria, Laos, Italy, Brazil, Japan, Hong Kong, Mexico, U.K., Indonesia, Netherl
 - Third Party Compromised Accounts sending SCAM emails
 - Compromised Microsoft Tenants
 - One of the core three (DKIM, DMARC, or SPF) is either ignored, perm error, or failed
-- Brand Impersonation: Most common SCAM. SCAMs include: Sharepoint, OneDrive, Paypal, DocuSign, Venmo, Amazon, Norton, random fake business to attempt to trick users in thinking the email coresspondence is legit when it is not (often a backstory with these with a spoof with someon in our JF company). 
+- Brand Impersonation: Most common SCAM. SCAMs include: Sharepoint, OneDrive, Paypal, DocuSign, Venmo, Amazon, Norton, random fake business to attempt to trick users in thinking the email coresspondence is legit when it is not (often a backstory with these with a spoof with someone in our JF company). 
 - Fake Invoices
 - Suspicious PDFs
 - GrayMail
@@ -25,6 +25,8 @@ Nigeria, Laos, Italy, Brazil, Japan, Hong Kong, Mexico, U.K., Indonesia, Netherl
 
 
 # Monitor User Activity post Phish:
+- Watch Sign-In Logs for User after they were sent a phish email to look for out of ordinary log ins, different device than normal, app access is not in line with their typical pattern
+- Watch Sign-In Logs as well for user's that clicked a malicious URL (I receive Mimecast notification through TTP when user clicks), sometimes the user does not go past the blocked notification. Still keep on eye on user account activity. 
 
 
 
