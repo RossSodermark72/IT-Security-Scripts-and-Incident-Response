@@ -21,7 +21,9 @@ netconn_dns:nslookup* OR netconn_dns:whois* OR netconn_dns:hostname*
 (event_simpleName:ProcessCreate AND process_name:net.exe) OR (event_simpleName:ProcessCreate AND process_name:dsquery.exe)
 
 # Idenity attempt to enumerate the running processes: 
-(event_simpleName:ProcessCreate AND process_name:net.exe) OR (event_simpleName:ProcessCreate AND process_name:dsquery.exe)
+(event_simpleName:ProcessCreate AND process_name:net.exe) OR (event_simpleName:ProcessCreate AND process_name:dsquery.exe) 
+
+#
 
 
 
