@@ -1,7 +1,7 @@
 # This is documentation for Phishing Data Patterns to aid in response to SCAM and SPAM emails with details for what action is needed 
 
 # Threat Actor Countries found: 
-Nigeria, Laos, Italy, Brazil, Japan, Hong Kong, Mexico, U.K., Indonesia, Netherlands, India, Korea, Israel. 
+Nigeria, Laos, Italy, Brazil, Japan, Hong Kong, Mexico, U.K., Indonesia, Netherlands, India, Korea, Israel , Iran, Germany, China.
 
 # Common Red Flags:
 - Third Party Compromised Accounts sending SCAM emails
@@ -11,6 +11,7 @@ Nigeria, Laos, Italy, Brazil, Japan, Hong Kong, Mexico, U.K., Indonesia, Netherl
 - Fake Invoices
 - Suspicious PDFs
 - GrayMail
+- Someone shared "DROPBOX.PDF" with you
 
 # What to Check First:
 - Always check the header first, valuable information to determine if it is legit or not. (I have used Microsfot Header Analyzer). 
