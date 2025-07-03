@@ -1,9 +1,5 @@
-# IT-Security-Scripts-Incident-Response
+# CROWDSTRIKE FALCON SCRIPTS
 
-# Repository for Scripts and Incident Response JF Petro Group
+# CUSTOM DETECTION RULES MAPPED TO THE MITRE ATT&CK FRAMEWORK
 
-
-#Crowdstrike Falcon
-
-#Microsoft 365 Security and Compliance Defender
-
+# ADVANCED SEARCH QUERIES
