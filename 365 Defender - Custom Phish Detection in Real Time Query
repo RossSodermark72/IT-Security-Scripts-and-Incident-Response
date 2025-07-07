@@ -1,0 +1,29 @@
+# Phish detections by method (Searches for the phish detections and what method was used to detect the phish, also giving a list of emails that contained some sort of phish
+Instructions: default set up to run query in advanced hunt is set to 7 days, you can update the time stamp before running query by setting it set in query. You can add any value to search for data etc. 1d would search for data from the past day.):
+
+EmailEvents
+| where Timestamp > ago(7d)
+| where isnotempty(DetectionMethods)
+| extend MDO_detection = parse_json(DetectionMethods)
+| where MDO_detection.Phish in 
+        (
+          @'["URL malicious reputation"]',
+          @'["URL detonation reputation"]',
+          @'["URL detonation"]',
+          @'["Advanced filter"]',
+          @'["General filter"]',
+          @'["Spoof intra-org"]',
+          @'["Spoof external domain"]',
+          @'["Spoof DMARC"]',
+          @'["Impersonation brand"]',
+          @'["Mixed analysis detection"]',
+          @'["File reputation"]',
+          @'["File detonation reputation"]',
+          @'["File detonation"]',
+          @'["Fingerprint matching"]'
+        )
+| extend SenderFromAddress_IPv4 = strcat(SenderFromAddress, ", ", SenderIPv4)
+| project Timestamp, NetworkMessageId, Subject, SenderFromAddress_IPv4, RecipientEmailAddress, DeliveryLocation, MDO_detection.Phish
+
+
+# This is an active custom detection query that runs in CRT (continious real time). Generates alert and provides me so much information to take action on phishing that gets past our first layer of Mimecast
