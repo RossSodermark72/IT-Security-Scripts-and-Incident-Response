@@ -1,4 +1,7 @@
 # Crowdstrike Falcon Advanced Event Queries
+# Version control -> Version 1
+  - new list, more system configs in development
+  - Working out workflow logic to automate these detections
 
 ----------------------
 | Networking and DNS |
