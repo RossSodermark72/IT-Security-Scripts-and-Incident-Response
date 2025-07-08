@@ -1,0 +1,10 @@
+#event_simpleName=ProcessRollup2 event_platform=Win ImageFileName=/\\(?<FileName>net1?\.exe)/i
+| CommandLine=/\s+(?<netCommand>(accounts|computer|config|continue|file|group|help|helpmsg|localgroup|name|pause|print|send|session|share|start|statistics|stop|time|use|user|view))\s+(?<netArguments>.+)/i
+| regex("(?<netFlag>\/\w+)(\s+|\:|$)", field=netArguments, strict=false, repeat=true)
+| default(value="none", field=[netFlag])
+| netCommand=?netCommand netFlag=?netFlag
+| rootURL := "https://falcon.crowdstrike.com/"
+| format("[Process Explorer](%sinvestigate/process-explorer/%s/%s)", field=["rootURL", "aid", "TargetProcessId"], as="Process Explorer")
+| groupBy([ProcessStartTime, aid, FileName, netCommand, netArguments], function=collect([netFlag, "Process Explorer"]))
+| select([ProcessStartTime, aid, FileName, netCommand, netFlag, netArguments, "Process Explorer"])
+| ProcessStartTime := ProcessStartTime*1000 | formatTime(format="%F %T.%L", field="ProcessStartTime", as="ProcessStartTime")
