@@ -4,16 +4,21 @@
 
 Crowdstrike Falcon (Advanced Event Search + Real Time Response Scripts)
 
-Microsoft 365 Security and Compliance Defender (Advanced Hunting) 
-
-Incident and Alert Response Documentation (Common Phishing and Malware Patterns, How to React and Act Swiftly)
+Microsoft 365 Security Defender (Advanced Hunting) 
 
 # Change Log: 
 1. Updated and added New Scripts
 2. Optimizing the commit update notifications
-
+3. Projects launched for query maintenance
 
 # TODO
 1. Finish Powershell script for running processes
 2. Finish 365 Defender Query for Embedded URLs
+
+# Query Maintenance Launched in Project Tab of this Repository
+1. Dedicated for consistent query maintenance plus enhancement
+2. Project managment
+3. Dashboard and organization for query development and feature addition
+
+   
 
