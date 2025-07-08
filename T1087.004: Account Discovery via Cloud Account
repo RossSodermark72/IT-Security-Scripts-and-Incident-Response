@@ -1,0 +1,15 @@
+// Search for PowerShell Commandlet Invocations that Enumerate Office365 Role Membership
+#event_simpleName=/^(ProcessRollup2$|CommandHistory$|ScriptControl)/ event_platform=Win /Get-MsolRoleMember/
+// Concatenate fields of interest from events of interest
+| Details:=concat([CommandHistory,CommandLine,ScriptContent])
+// Create "Description" field based on location of target string
+| case {
+#event_simpleName=CommandHistory AND CommandHistory=/(Get-MsolRoleMember)/i | Description:="T1087.004 discovered in command line history.";
+#event_simpleName=ProcessRollup2 AND CommandLine=/(Get-MsolRoleMember)/i | Description:="T1087.004 discovered in command line invocation.";
+#event_simpleName=/^ScriptControl/ AND ScriptContent=/(Get-MsolRoleMember)/i | Description:="T1087.004 discovered in script contents.";
+* | Description:="T1087.003 discovered in general event telemetry.";
+}
+// Format the output into table
+| select([@timestamp, ComputerName, aid, UserName, UserSid, TargetProcessId, Description, Details])
+// Add link to Graph Explorer
+| format("[Graph Explorer](https://falcon.crowdstrike.com/graphs/process-explorer/graph?id=pid:%s:%s)", field=["aid", "TargetProcessId"], as="Graph Explorer")
