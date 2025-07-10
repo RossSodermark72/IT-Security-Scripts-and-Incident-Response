@@ -1,0 +1,63 @@
+//Prefetch files as part of incident response, also is supposed to list the corresponding SHA 256 hash. Cookie crumb methodology, using this to help trace malicious footprints.
+
+function Convert-Hashtable([Parameter(Mandatory=$true)][psobject]$Object){
+  [hashtable]$i=@{}
+  $Object.PSObject.Properties|?{![string]::IsNullOrEmpty($_.Value)}|%{
+    $i[($_.Name -replace '\s','_' -replace '\W',$null)]=$_.Value
+  }
+  $i
+}
+function Convert-Json([Parameter(Mandatory=$true)][string]$String){
+  if($PSVersionTable.PSVersion.ToString() -lt 3.0){
+    $Serializer.DeserializeObject($String)
+  }else{
+    $Object=$String|ConvertFrom-Json
+    if($Object){Convert-Hashtable $Object}
+  }
+}
+function Format-Result([Parameter(Mandatory=$true)][hashtable[]]$Hashtable,[string]$String){
+  [void]([Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey('LocalMachine',$env:ComputerName)|%{
+    try{
+      $_.OpenSubKey('SYSTEM\\CurrentControlSet\\Services\\CSAgent\\Sim')|%{
+        foreach($i in @('AG','CU')){
+          nv -Name $i -Value ([System.BitConverter]::ToString($_.GetValue($i))).Replace('-',$null).ToLower()
+        }
+      }
+    }catch{}
+  })
+  [hashtable]@{script=$String;cid=$CU;aid=$AG;result=$Hashtable}
+}
+function Get-Sha256([string]$String){
+  $Algorithm=[System.Security.Cryptography.HashAlgorithm]::Create('SHA256')
+  $Value=[System.BitConverter]::ToString($Algorithm.ComputeHash([System.IO.File]::ReadAllBytes($String)))
+  $Value.Replace('-','').ToLower()
+}
+function Write-Json([Parameter(Mandatory=$true)][hashtable]$Hashtable){
+  if($PSVersionTable.PSVersion.ToString() -lt 3.0){
+    $Serializer.Serialize($Hashtable)
+  }else{
+    ConvertTo-Json $Hashtable -Depth 8 -Compress
+  }
+}
+try{
+  if($PSVersionTable.PSVersion.ToString() -lt 3.0){
+    Add-Type -AssemblyName System.Web.Extensions
+    $Serializer=New-Object System.Web.Script.Serialization.JavascriptSerializer
+  }
+  [string]$Prefetch=Join-Path $env:SystemRoot Prefetch
+  if((Test-Path $Prefetch -PathType Container) -eq $false){
+    throw "Cannot find path '$Prefetch' because it does not exist."
+  }
+  [hashtable[]]$Output=gci $Prefetch *.pf -Recurse|select FullName,Length,CreationTime,LastWriteTime,
+  LastAccessTime|%{
+    $_.PSObject.Properties|%{if($_.Value -is [datetime] -and $_.Value.Ticks){$_.Value=$_.Value.Ticks}}
+    Convert-Hashtable $_
+  }
+  foreach($i in $Output){
+    [string]$Existing=$Output|?{$_.FullName -eq $i.FullName}|select -Unique|select -ExpandProperty Sha256 -EA 0
+    $i['Sha256']=if($Existing){$Existing}else{Get-Sha256 $i.FullName}
+  }
+  if($Output){Write-Json (Format-Result $Output Prefetch)}else{throw "No result(s)."}
+}catch{
+  throw $_
+}
