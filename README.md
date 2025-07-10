@@ -12,6 +12,8 @@ Microsoft 365 Security Defender (Advanced Hunting)
 3. Projects launched for query maintenance
 
 # Crowdstrike MITRE TACTICS AND TECHNIQUES CUSTOM DETECTION LOCATED IN CROWDSTRIKE BRANCH OF THIS REPOSITORY
+1. Targets specific MITRE Tactics and Sub Tactics
+2. Heavy Focus on post exploitation and account discovery
 
 # TODO
 1. Finish Powershell script for running processes
