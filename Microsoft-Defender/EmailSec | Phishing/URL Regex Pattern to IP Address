@@ -1,0 +1,3 @@
+// This query helps hunting for Emails containing links to IP addresses by matching regex pattern below:
+EmailUrlInfo
+| where Url matches regex @"file://(?:[0-9]{1,3}\.){3}[0-9]{1,3}"
