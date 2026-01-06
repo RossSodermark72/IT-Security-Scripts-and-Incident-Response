@@ -1,0 +1,10 @@
+EmailAttachmentInfo
+| where SenderFromAddress =~ "MaliciousSender@example.com"
+| where isnotempty(SHA256)
+| join (
+DeviceFileEvents
+| project FileName, SHA256
+) on SHA256
+
+// Input suspected email address between the quotes and run the query in 365 Defender - > Advanced Hunting. 
+// Great for plugging in a confirmed malicious sender or a malicious email from a specific sender -RS
