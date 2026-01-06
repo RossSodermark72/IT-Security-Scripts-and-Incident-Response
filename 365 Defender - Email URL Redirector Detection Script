@@ -1,8 +1,0 @@
-# Email Redirect Search (Searches for emails that have redirect links within email):
-
-EmailUrlInfo
-| where Url matches regex @"s?\:\/\/(?:www\.)?t\.(?:[\w\-\.]+\/+)+(?:r|redirect)\/?\?"
-
-
-# Version 1.2
-- Updated syntax to ensure it runs per KQL documentation.
