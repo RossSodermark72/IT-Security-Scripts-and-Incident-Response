@@ -1,0 +1,106 @@
+//Retrieves information about a file, including original filename and whether it was downloaded from the Internet (including URLs !) Finds the location a file was downloaded from via a web browser for incident response following a detection.
+
+function Convert-Hashtable([Parameter(Mandatory=$true)][psobject]$Object){
+  [hashtable]$i=@{}
+  $Object.PSObject.Properties|?{$null -ne $_.Value -and $_.Value -ne ''}|%{
+    $i[($_.Name -replace '\s','_' -replace '\W',$null)]=$_.Value
+  }
+  $i
+}
+function Convert-Json([Parameter(Mandatory=$true)][string]$String){
+  if($PSVersionTable.PSVersion.ToString() -lt 3.0){
+    $Serializer.DeserializeObject($String)
+  }else{
+    $Object=$String|ConvertFrom-Json
+    if($Object){Convert-Hashtable $Object}
+  }
+}
+function Format-Result([Parameter(Mandatory=$true)][hashtable[]]$Hashtable,[string]$String){
+  [void]([Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey('LocalMachine',$env:ComputerName)|%{
+    try{
+      $_.OpenSubKey('SYSTEM\\CurrentControlSet\\Services\\CSAgent\\Sim')|%{
+        foreach($i in @('AG','CU')){
+          nv -Name $i -Value ([System.BitConverter]::ToString($_.GetValue($i))).Replace('-',$null).ToLower()
+        }
+      }
+    }catch{}
+  })
+  [hashtable]@{script=$String;cid=$CU;aid=$AG;result=$Hashtable}
+}
+function Convert-Path([Parameter(Mandatory=$true)][string]$String){
+  $sb=New-Object System.Text.StringBuilder(65536)
+  $k32=Add-Type -MemberDefinition @'
+[DllImport("kernel32.dll",SetLastError=true)]
+public static extern uint QueryDosDevice(string lpDeviceName,System.Text.StringBuilder lpTargetPath,uint ucchMax);
+'@ -Name Kernel32 -Namespace Win32 -PassThru
+  gwmi -Query "Select DriveLetter FROM Win32_Volume WHERE DriveLetter LIKE '%'"|
+  select -ExpandProperty DriveLetter|%{
+    [void]$k32::QueryDosDevice($_,$sb,65536)
+    [string]$ntp=[regex]::Escape($sb.ToString())
+    if($String -match $ntp){$String -replace $ntp,$_}
+  }
+}
+function Convert-Time([Parameter(Mandatory=$true)][datetime]$Datetime){
+  [Xml.XmlConvert]::ToString($Datetime.ToUniversalTime(),
+    [Xml.XmlDateTimeSerializationMode]::Utc) -replace '\.\d+Z$','Z'
+}
+function Write-Json([Parameter(Mandatory=$true)][hashtable]$Hashtable){
+  if($PSVersionTable.PSVersion.ToString() -lt 3.0){
+    $Serializer.Serialize($Hashtable)
+  }else{
+    ConvertTo-Json $Hashtable -Depth 8 -Compress
+  }
+}
+function Get-Sha256([string]$String){
+  $Algorithm=[System.Security.Cryptography.HashAlgorithm]::Create('SHA256')
+  $Value=[System.BitConverter]::ToString($Algorithm.ComputeHash([System.IO.File]::ReadAllBytes($String)))
+  $Value.Replace('-','').ToLower()
+}
+function Get-FileInfo([Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$Path){
+  if($Path -match '\\HarddiskVolume\d\\'){$Path=Convert-Path $Path}
+  if((Test-Path $Path -PathType Leaf) -eq $false){
+    throw "Cannot find path '$Path' because it does not exist or is not a file."
+  }
+  gci $Path|select Length,CreationTime,LastWriteTime,LastAccessTime,Mode,VersionInfo|%{
+    [hashtable]$Output=@{}
+    $_.PSObject.Properties|?{$null -ne $_.Value}|%{
+      if($_.Name -eq 'VersionInfo'){
+        ($_.Value|select OriginalFilename,FileDescription,ProductName,CompanyName,FileName,
+        FileVersion).PSObject.Properties|?{$null -ne $_.Value}|%{$Output[$_.Name]=$_.Value}
+      }else{
+        $Output[$_.Name]=if($_.Value -is [datetime]){Convert-Time $_.Value}else{$_.Value}
+      }
+    }
+    (Get-Acl $Path|select Owner,Group,Sddl).PSObject.Properties|?{$null -ne $_.Value}|%{$Output[$_.Name]=$_.Value}
+    $Output['Sha256']=Get-Sha256 $Path
+    [string[]]$Zone=try{cmd /c "more < $($Path):Zone.Identifier" 2>$null}catch{}
+    if($Zone){
+      $Zone|Select-String -Pattern '='|%{
+        [string[]]$Array=$_ -split '=',2
+        if($Array[0] -eq 'ZoneId'){
+          $Output[$Array[0]]=[int]$Array[1]
+          $Output['ZoneLabel']=switch($Array[1]){
+            0 {'localhost'}
+            1 {'intranet'}
+            2 {'trusted_site'}
+            3 {'internet'}
+            4 {'restricted_site'}
+          }
+        }elseif($Array[0] -eq 'HostUrl'){
+          $Output[$Array[0]]=$Array[1]
+        }
+      }
+    }
+    Write-Json (Format-Result $Output FileInfo)
+  }
+}
+try{
+  if($PSVersionTable.PSVersion.ToString() -lt 3.0){
+    Add-Type -AssemblyName System.Web.Extensions
+    $Serializer=New-Object System.Web.Script.Serialization.JavascriptSerializer
+  }
+  if($args[0]){$Param=Convert-Json $args[0]}
+  Get-FileInfo @Param
+}catch{
+  throw $_
+}
