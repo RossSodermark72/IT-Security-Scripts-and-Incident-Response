@@ -1,0 +1,24 @@
+// Get events in scope for MITRE T1087.003
+#event_simpleName=/^(ProcessRollup2$|CommandHistory$|ScriptControl)/
+
+// Get strings of interest
+| /(Get-AddressList|Get-GlobalAddressList|Get-OfflineAddressBook)/i
+
+// Create "Description" field based on location of target string
+| case {
+   #event_simpleName=CommandHistory AND CommandHistory=/(Get-AddressList|Get-GlobalAddressList|Get-OfflineAddressBook)/i | Description:="T1087.003 discovered in command line history.";
+   #event_simpleName=ProcessRollup2 AND CommandLine=/(Get-AddressList|Get-GlobalAddressList|Get-OfflineAddressBook)/i | Description:="T1087.003 discovered in command line invocation.";
+   #event_simpleName=/^ScriptControl/ AND ScriptContent=/(Get-AddressList|Get-GlobalAddressList|Get-OfflineAddressBook)/i | Description:="T1087.003 discovered in script contents.";
+   * | Description:="T1087.003 discovered in general event telemetry.";
+}
+
+// Concatenate fields of interest from events of interest
+| Details:=concat([CommandHistory,CommandLine,ScriptContent])
+
+// Format output into table
+| select([@timestamp, ComputerName, aid, UserName, UserSid, TargetProcessId, Description, Details])
+
+// Add link to Graph Explorer
+| format("[Graph Explorer](https://falcon.crowdstrike.com/graphs/process-explorer/graph?id=pid:%s:%s)", field=["aid", "TargetProcessId"], as="Graph Explorer")
+
+// Monitor for execution of commands and arguments associated with enumeration or information gathering of email addresses and accounts such as Get-AddressList, Get-GlobalAddressList, and Get-OfflineAddressBook. --Ross Sodermark 9/2025
