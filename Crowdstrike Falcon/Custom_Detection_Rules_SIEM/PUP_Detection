@@ -1,0 +1,7 @@
+event_simpleName=FileWrite OR event_simpleName=FileCreation
+| filter FileName matches_regex ".*\\.(exe|dll|sys)$"
+| filter (FileName matches_regex ".*(toolbar|adware|bloatware|spyware|unwanted).*")
+| stats-count by FileName: FilePath: ComputerName: UserName:
+| sort-count
+
+// Searches for PUPs, adware etc.. Part of the antimalware defense system in development. Aiding in reducing the attack surface.
