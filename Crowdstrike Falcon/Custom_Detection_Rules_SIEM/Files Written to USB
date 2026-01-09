@@ -1,0 +1,28 @@
+#repo=base_sensor
+ | in(#event_simpleName,values=[ArcFileWritten, ArjFileWritten, BlfFileWritten, BmpFileWritten, BZip2FileWritten, CabFileWritten, DmpFileWritten, DwgFileWritten, DxfFileWritten, ELFFileWritten, EseFileWritten, GenericFileWritten, GifFileWritten, GzipFileWritten, IdwFileWritten, JarFileWritten, JavaClassFileWritten, JpegFileWritten, MachOFileWritten, MSDocxFileWritten, MSPptxFileWritten, MSVsdxFileWritten, MSXlsxFileWritten, OleFileWritten, OoxmlFileWritten, PdfFileWritten, PeFileWritten, PngFileWritten, RarFileWritten, RtfFileWritten, SevenZipFileWritten, SldFileWritten, SuspiciousEseFileWritten, SuspiciousPeFileWritten, TarFileWritten, TiffFileWritten, VdiFileWritten, VmdkFileWritten, XarFileWritten, ZipFileWritten])
+ | IsOnRemovableDisk="1" DiskParentDeviceInstanceId= "usb*" OR DiskParentDeviceInstanceId= "USB*" cid=?{cid=*}
+ | default(field=[UserName,ComputerName],value="--",replaceEmpty=true)
+ | in(field=ComputerName,values=?{ComputerName="*"})
+ | in(field=UserName,values=?{UserName="*"})
+ | groupby(DiskParentDeviceInstanceId,function = [ { head(1) | collect(cid) }, { head(1) | collect(event_platform) }, sum(Size, as=TotalBytes), collect([ComputerName, UserName]), collect([FileName], limit=10), count(UserName,distinct=true,as=HostCount), min(@timestamp,as=FirstWriteTime), max(@timestamp,as=LatestWriteTime), count(as=#OfFilesWritten)], limit=max)
+ | FirstWriteTime_UTC_readable := formatTime("%FT%T%z", field=FirstWriteTime)
+ | LatestWriteTime_UTC_readable := formatTime("%FT%T%z", field=LatestWriteTime)
+ | MinFiles := ?{min_files=0}
+ | MinBytes := ?{min_bytes=0}
+   | MinBytes match {
+     /\d+/ => *;
+     * => MinBytes := 0;
+ }
+ | MinFiles match {
+     /\d+/ => *;
+     * => MinFiles := 0;
+ }
+ | test(TotalBytes > MinBytes)
+ | test(#OfFilesWritten > MinFiles)
+ | join({
+     $falcon/investigate:cid_name()
+ }, field=cid, include=[name], start=1d, mode=left)
+ | Company := rename(name)
+ | "Sample Files" := rename(FileName)
+
+// Detections files written to USB
