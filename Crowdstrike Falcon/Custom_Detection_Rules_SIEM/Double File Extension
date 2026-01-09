@@ -1,0 +1,5 @@
+#repo=base_sensor  #event_simpleName=ZipFileWritten
+FileName=/(txt|pdf|doc|docm|ppt|html)\.zip/i
+| groupBy([#event_simpleName, @timestampt, FileName],function =(count(FileName, as=FileNameCount))) // This query looks for double file extensions display file names with txt, doc, docm, ppt, html but has an actual file extension of a zip! -- Ross Sodermark Sec Analyst 12/10/2025
+
+// Looks for filenames that end in html or txt or pdf or doc or ppt but have an extension .zip
