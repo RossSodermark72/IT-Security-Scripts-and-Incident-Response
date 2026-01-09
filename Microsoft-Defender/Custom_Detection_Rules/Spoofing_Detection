@@ -1,0 +1,4 @@
+EmailEvents
+| where ThreatTypes has "Spoof"
+| project Timestamp, SenderFromAddress, SenderDisplayName, RecipientEmailAddress, Subject, NetworkMessageId, ReportId, AttachmentCount
+| order by Timestamp desc
