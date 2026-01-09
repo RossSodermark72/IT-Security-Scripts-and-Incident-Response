@@ -1,0 +1,79 @@
+Wireshark Commands & Filters used by me within PCAP analysis
+
+CAPTURE FILTERS (before capture)
+--------------------------------
+host 192.168.1.10        # Traffic to/from a host
+net 10.0.0.0/24          # Subnet traffic
+tcp port 443             # HTTPS only
+icmp                     # ICMP only
+not arp                  # Exclude ARP
+
+DISPLAY FILTERS (after capture)
+--------------------------------
+ip.addr == 192.168.1.10
+ip.src == 10.0.0.5
+ip.dst == 8.8.8.8
+
+tcp
+udp
+icmp
+dns
+http
+tls
+
+PORT FILTERS
+------------
+tcp.port == 443
+tcp.srcport == 22
+tcp.dstport == 3389
+udp.port == 53
+
+TCP ANALYSIS
+------------
+tcp.flags.syn == 1 && tcp.flags.ack == 0   # SYNs
+
+tcp.flags.reset == 1                       # Resets
+
+tcp.analysis.retransmission                # Retransmissions
+
+tcp.analysis.zero_window                   # Zero window
+
+DNS ANALYSIS
+-------------
+dns
+dns.qry.name contains "example"
+dns.flags.response == 1
+dns.response_in == 0
+dns.qry.type == 16      # TXT records
+
+HTTP ANALYSIS
+-------------
+http.request
+http.response
+http.request.method == "POST"
+http.response.code == 401
+
+TLS ANALYSIS
+-------------
+tls
+tls.handshake.type == 1
+tls.handshake.extensions_server_name
+tls.alert_message
+
+SUSPICIOUS / THREAT HUNTING
+---------------------------
+tcp.len == 0
+frame.time_delta < 1
+icmp && data.len > 0
+udp.length > 512
+
+TIME FILTERS
+------------
+frame.time_delta > 0.5
+frame.time >= "2026-01-09 09:30:00"
+
+TSHARK EXAMPLES
+---------------
+tshark -i eth0 -f "tcp port 443"
+tshark -r capture.pcapng -Y "dns"
+tshark -r capture.pcapng -T fields -e ip.src -e ip.dst
