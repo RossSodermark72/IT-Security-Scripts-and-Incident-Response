@@ -1,0 +1,24 @@
+// Get events of interest where enumeration APIs may be called in scope for T1010.
+#event_simpleName=/^(ProcessRollup2$|CommandHistory$|ScriptControl)/ event_platform=Win /(mainWindowTitle|Get-Process|GetForegroundWindow|GetProcesses)/i
+
+// Concatenate fields of interest from events of interest
+| Details:=concat([CommandHistory,CommandLine,ScriptContent])
+
+// Create "Description" field based on location of target string
+| case {
+#event_simpleName=CommandHistory | Description:="T1010 discovered in command line history.";
+#event_simpleName=ProcessRollup2 | Description:="T1010 discovered in command line invocation.";
+#event_simpleName=/^ScriptControl/ | Description:="T1010 discovered in script contents.";
+* | Description:="T1010 discovered in general event telemetry.";
+}
+
+// Normalize UPID
+| falconPID:=TargetProcessId | falconPID:=ContextProcessId
+
+// Format output to table
+| select([@timestamp, ComputerName, aid, UserName, UserSid, falconPID, Description, Details])
+
+// Add link to Graph Explorer
+| format("[Graph Explorer](https://falcon.crowdstrike.com/graphs/process-explorer/graph?id=pid:%s:%s)", field=["aid", "falconPID"], as="Graph Explorer")
+
+// MITRE T1010 - Discovery via Application Window Discovery
