@@ -1,0 +1,8 @@
+//Script for obtaining the current logged in user for incident response.
+
+$User = tasklist /v /FI "IMAGENAME eq explorer.exe" /FO list | find "User Name:"
+$User = $User.Substring(14)
+$pos = $User.IndexOf("\")
+$leftPart = $User.Substring(0, $pos)
+$userextract = $User.Substring($pos+1)
+echo "$userextract is the currently logged in user"
