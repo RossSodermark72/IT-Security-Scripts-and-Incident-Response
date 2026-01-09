@@ -1,0 +1,10 @@
+// CEO BEC Phishing Custom Detection - > Detects the CEO BEC common phishing scam sent to our users that bypasses Mimecast Impersonation
+// MITRE: Technique: T1566 PHISHING 
+// Satisifes NIST 800-53 CA-007
+// By: Ross Sodermark - SEC ANALYST  LAST UPDATE: 12/8/2025 V1.2 (Added other email domains)
+EmailEvents
+| where Subject == "Keith Shadrick"
+| where SenderFromDomain in~ ("gmail.com", "yahoo.com", "icloud.com", "outlook.com")
+| where EmailDirection == "Inbound"
+| project DeliveryAction, ReportId, Timestamp, RecipientEmailAddress, AttachmentCount, DeliveryLocation, AdditionalFields, BulkComplaintLevel, Context, SenderFromAddress, NetworkMessageId
+| render table 
