@@ -1,0 +1,33 @@
+// Get events of interest for T1580
+(#event_simpleName=/^(ProcessRollup2|CommandHistory|ScriptControl)/ /(DescribeInstances|ListBuckets|HeadBucket|GetPublicAccessBlock|DescribeDBInstances)/i) OR (#event_simpleName=/^(ProcessRollup2|CommandHistory|ScriptControl)/ /(gcloud\s+compute\s+instances\s+list)/i) OR (#event_simpleName=/^(ProcessRollup2|CommandHistory|ScriptControl)/ /(az\s+vm\s+list)/i)
+
+// Normalize details field
+| Details:=concat([CommandLine, CommandHistory,ScriptContent])
+
+// Created shortened Details field of 100 characters to improve readability
+| CommandDetails:=format("%,.200s", field=Details)
+
+// Normalize Falcon UPID value
+| falconPID:=TargetProcessId | falconPID:=ContextProcessId
+
+// Check cloud provider
+| case {
+    Details=/(DescribeInstances|ListBuckets|HeadBucket|GetPublicAccessBlock|DescribeDBInstances)/i | Cloud:="AWS";
+    Details=/gcloud\s+/i | Cloud:="GCP";
+    Details=/az\s+/i | Cloud:="Azure";
+}
+
+// Get API or command line program
+| regex("(?<Command>(DescribeInstances|ListBuckets|HeadBucket|GetPublicAccessBlock|DescribeDBInstances|gcloud\s+|az\s+))", field=Details, strict=false)
+
+// Organize output
+| groupBy([Details, Cloud, #event_simpleName], function=([collect([Command, CommandDetails]), count(aid, distinct=true, as=UniqueEndpoints), count(aid, as=ExecutionCount), selectFromMax(field="@timestamp", include=[aid, falconPID])]))
+
+// Set threshold
+| test(ExecutionCount<10)
+
+// Dispaly link for Graph Explorer for last execution
+| format("[Last Execution](https://falcon.crowdstrike.com/graphs/process-explorer/graph?id=pid:%s:%s)", field=["aid", "falconPID"], as="Graph Explorer")
+
+// Drop unneeded fields
+| drop([Details, aid, falconPID])
