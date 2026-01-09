@@ -1,0 +1,10 @@
+event_simpleName=ProcessRollup* AND NOT FileName "IN" ("gpupdate.exe" "winmgmt.exe" "sc.exe" "attrib.exe" "reg.exe" "schtasks.exe" "wermgr.exe" "msbuild.exe" "csc.exe")
+| dedup CommandLine
+| "rename" ParentProcessId_decimal as TargetProcessId_decimal
+| "rename" CommandLine as ChildCommandLine
+| "rename" FileName as ChildFileName
+| "join"  TargetProcessId_decimal    
+    search event_simpleName=ProcessRollup* FileName="powershell.exe" AND NOT CommandLine "IN" ("*sccm*" "*gpclient*")
+| "table" ComputerName FileName CommandLine ChildFileName ChildCommandLine
+
+// Looks for processes started by PowerShell excluding specific processes and specific PowerShell command patterns
