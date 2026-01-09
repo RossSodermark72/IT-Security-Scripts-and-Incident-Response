@@ -1,0 +1,112 @@
+# List installed Browser extensions for Chromium-based browsers (Chrome, Edge) for all users! Malicious browser extensions are increasingly being used as attack vectors. Extensions with malware may be abused to remotely execute code, scrape user information, or set up as exfiltration channels to the hacker’s browser.
+
+function Convert-Hashtable([Parameter(Mandatory=$true)][psobject]$Object){
+  [hashtable]$i=@{}
+  $Object.PSObject.Properties|?{![string]::IsNullOrEmpty($_.Value)}|%{
+    $i[($_.Name -replace '\s','_' -replace '\W',$null)]=$_.Value
+  }
+  $i
+}
+function Convert-Json([Parameter(Mandatory=$true)][string]$String){
+  if($PSVersionTable.PSVersion.ToString() -lt 3.0){
+    $Serializer.DeserializeObject($String)
+  }else{
+    $Object=$String|ConvertFrom-Json
+    if($Object){Convert-Hashtable $Object}
+  }
+}
+function Format-Result([Parameter(Mandatory=$true)][hashtable[]]$Hashtable,[string]$String){
+  [void]([Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey('LocalMachine',$env:ComputerName)|%{
+    try{
+      $_.OpenSubKey('SYSTEM\\CurrentControlSet\\Services\\CSAgent\\Sim')|%{
+        foreach($i in @('AG','CU')){
+          nv -Name $i -Value ([System.BitConverter]::ToString($_.GetValue($i))).Replace('-',$null).ToLower()
+        }
+      }
+    }catch{}
+  })
+  [hashtable]@{script=$String;cid=$CU;aid=$AG;result=$Hashtable}
+}
+function Write-Json([Parameter(Mandatory=$true)][hashtable]$Hashtable){
+  if($PSVersionTable.PSVersion.ToString() -lt 3.0){
+    $Serializer.Serialize($Hashtable)
+  }else{
+    ConvertTo-Json $Hashtable -Depth 8 -Compress
+  }
+}
+function Get-BrowserExtension([string]$Match){
+  [string]$Query="SELECT * FROM Win32_UserProfile WHERE sid LIKE 'S-1-5-21%'"
+  [string]$NameRegex='(?<="extName":\s{.*"message":\s).+'
+  [hashtable[]]$Output=foreach($User in (gwmi -Query $Query)){
+    foreach($Browser in @('Google\Chrome','Microsoft\Edge')){
+      [string]$ExtRoot=Join-Path $User.LocalPath "AppData\Local\$Browser\User Data\Default\Extensions"
+      if(Test-Path $ExtRoot -PathType Container){
+        [string]$UserName=$User.LocalPath|Split-Path -Leaf
+        foreach($ExtFolder in (gci $ExtRoot|?{$_.Name -ne 'Temp'})){
+          foreach($ExtSubfolder in (gci $ExtFolder.FullName)){
+            [string]$ManifestPath=Join-Path $ExtSubfolder.FullName manifest.json
+            if(Test-Path $ManifestPath -PathType Leaf){
+              [string]$Manifest=Get-Content $ManifestPath
+              if($Manifest){
+                [string]$BrowserName=($Browser -split '\\',2)[-1]
+                foreach($Ext in (Convert-Json $Manifest)){
+                  [string[]]$ExtName=if($Ext.name -notlike '__MSG*'){
+                    $Ext.name
+                  }else{
+                      [string]$Locale=Join-Path $ExtSubfolder.Fullname '_locales'
+                      if(Test-Path $Locale -PathType Container){
+                        [string[]]$En=gci $Locale -Filter 'en*'|select -ExpandProperty FullName
+                        if($En){
+                          $En|%{
+                            [string]$MsgPath=Join-Path $_ messages.json
+                            [string]((Get-Content $MsgPath) -replace '\n',' ') -split '},'|
+                            Select-String -AllMatches $NameRegex|%{([string]($_.Matches -replace '"',$null)).Trim()}
+                        }
+                      }
+                    }
+                  }
+                  [string]$ExtName=$ExtName|select -First 1
+                  if(!$Match -or $Match -and $ExtName -match $Match){
+                    $i=@{
+                      Browser=$BrowserName
+                      UserName=$UserName
+                      ExtensionId=[string]($ExtFolder.Name)
+                      Name=$ExtName
+                    }
+                    switch($Ext){
+                      {$null -ne $_.version} {$i.Add('Version',[string]$Ext.version)}
+                      {$null -ne $_.manifest_version} {$i.Add('ManifestVersion',[int]$Ext.manifest_version)}
+                      {$null -ne $_.content_security_policy} {
+                        $i.Add('ContentSecurityPolicy',$Ext.content_security_policy)
+                      }
+                      {$null -ne $_.offline_enabled} {$i.Add('OfflineEnabled',[boolean]$Ext.offline_enabled)}
+                      {$null -ne $_.permissions} {$i.Add('Permission',[string[]]$Ext.permissions)}
+                    }
+                    $i
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  if($Output){
+    Write-Json (Format-Result $Output BrowserExtension)
+  }elseif($Match){
+    throw "No result(s) for '$Match'."
+  }else{
+    throw "No result(s)."
+  }
+}
+try{
+  if($PSVersionTable.PSVersion.ToString() -lt 3.0){
+    Add-Type -AssemblyName System.Web.Extensions
+    $Serializer=New-Object System.Web.Script.Serialization.JavascriptSerializer
+  }
+  if($args[0]){$Param=Convert-Json $args[0]}
+  Get-BrowserExtension @Param
+}catch{
+  throw $_
+}
