@@ -1,0 +1,14 @@
+// Get Windows events for script contents and command line history
+#event_simpleName=/^(ScriptControl|CommandHistory)/ event_platform=Win
+
+// Normalize field of interest
+| Details:=concat([ScriptContent,CommandHistory])
+
+// Search for target string of Get-AD* commandlets of interest
+| Details=/Get-ADUser/i OR Details=/Get-ADGroupMember/i
+
+// Make endpoint system clock timestamp human readable
+| ProcessStartTime:=ProcessStartTime*1000 | ProcessStartTime:=formatTime(format="%Y-%m-%dT%H:%M:%S.%L%z", field=ProcessStartTime)
+
+// Format output into a table
+| select([ProcessStartTime, aid, ComputerName, UserName, #event_simpleName, Details])
