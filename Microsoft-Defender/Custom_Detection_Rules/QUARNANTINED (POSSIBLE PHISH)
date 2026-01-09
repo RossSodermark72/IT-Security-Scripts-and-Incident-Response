@@ -1,0 +1,5 @@
+EmailEvents
+| where Timestamp > ago(1d)
+| where EmailDirection == "Inbound"
+| where DeliveryLocation  == "Quarantine"
+| project Timestamp, SenderFromAddress, RecipientEmailAddress, Subject, NetworkMessageId, ThreatTypes, ReportId, AttachmentCount, SenderIPv4, LatestDeliveryAction  
