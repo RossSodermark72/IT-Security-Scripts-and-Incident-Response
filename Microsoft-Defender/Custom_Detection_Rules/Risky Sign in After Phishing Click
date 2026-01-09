@@ -1,0 +1,31 @@
+// This detection approach correlates a user accessing an email with image/document attachments and a risky sign-in attempt from non-trusted devices.
+// Combines two security events into one, want to correlate a phishing email with a risky sign in
+let successfulRiskySignIn = materialize(AADSignInEventsBeta
+| where Timestamp > ago(1d)
+| where isempty(DeviceTrustType)
+| where IsManaged != 1
+| where IsCompliant != 1
+| where RiskLevelDuringSignIn in (50, 100)
+| project Timestamp, ReportId, IPAddress, AccountUpn, AccountObjectId, SessionId, Country, State, City
+);
+let suspiciousSignInUsers = successfulRiskySignIn
+| distinct AccountObjectId;
+let suspiciousSignInIPs = successfulRiskySignIn
+| distinct IPAddress;
+let suspiciousSignInCities = successfulRiskySignIn
+| distinct City;
+CloudAppEvents
+| where Timestamp > ago(1d)
+| where ActionType == "MailItemsAccessed"
+| where AccountObjectId in (suspiciousSignInUsers)
+| where IPAddress !in (suspiciousSignInIPs)
+| where City !in (suspiciousSignInCities)
+| join kind=inner successfulRiskySignIn on AccountObjectId
+| where AccountObjectId in (suspiciousSignInUsers)
+| where (Timestamp - Timestamp1) between (-5min .. 5min)
+| extend folders = RawEventData.Folders
+| mv-expand folders
+| extend items = folders.FolderItems
+| mv-expand items
+| extend InternetMessageId = tostring(items.InternetMessageId)
+| project Timestamp, ReportId, IPAddress, InternetMessageId, AccountObjectId, SessionId, Country, State, City
