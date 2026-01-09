@@ -1,0 +1,9 @@
+EmailAttachmentInfo
+| where SenderFromAddress =~ "MaliciousSender@example.com"
+| where isnotempty(SHA256)
+| join (
+DeviceFileEvents
+| project FileName, SHA256
+) on SHA256
+
+// Enter sender in the quotes for any email address you want to have searched and create a detection for it! --RS
