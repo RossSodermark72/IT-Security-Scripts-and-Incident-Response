@@ -1,0 +1,10 @@
+//Detect renamed executables 
+#event_simpleName="NewExecutableRenamed"
+//Rename field for correlation in join query
+| rename(field=TargetFileName, as=ImageFileName)
+//Join with process execution data  
+| join(query={#event_simpleName=/ProcessRollup2/F}, field=[ImageFileName])  
+//Create a table with key fields 
+| table([aid, ComputerName, SourceFileName, ImageFileName, CommandLine])  
+
+// Searches for renamed executable. Help with detecting Masquerading T1036.003
