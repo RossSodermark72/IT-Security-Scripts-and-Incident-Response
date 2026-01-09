@@ -1,0 +1,11 @@
+// Lists emails that have triggered an URL block by Microsoft SafeLinks
+// Query satisfies the MITRE Technique T1566.002 [Phishing: SpearPhishing Link]
+// Fulfills NIST 800-53 CA-07
+// The query provides insight into blocked URL clicks for Office 365 Link Protect // RS 11-26-2025
+UrlClickEvents
+| where ActionType == 'ClickBlocked'
+// Only filter on Safe Links actions from mail
+| where Workload == 'Email'
+// join the email events
+| join kind=leftouter (EmailEvents | project NetworkMessageId, Subject, SenderFromAddress) on NetworkMessageId
+| project Timestamp, AccountUpn, Product = Workload, Url, ThreatTypes, Subject, SenderFromAddress, UrlChain, ReportId
