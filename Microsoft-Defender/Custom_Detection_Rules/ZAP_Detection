@@ -1,0 +1,4 @@
+EmailPostDeliveryEvents
+| where ActionType == "ZAP"
+| project Timestamp, ActionType, NetworkMessageId, RecipientEmailAddress, ReportId
+| order by Timestamp desc
